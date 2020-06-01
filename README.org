@@ -1,0 +1,120 @@
+#+TITLE: IPFS Ed25519 keys
+#+OPTIONS: ^:nil
+#+PROPERTY: header-args:sh :session *shell ipfs-ed25519-keys sh* :results silent raw
+#+PROPERTY: header-args:python :session *shell ipfs-ed25519-keys python* :results silent raw
+
+** System environment
+
+- Debian 9.11
+
+- Python 3.7.0
+
+- ipfs version 0.5.1
+
+Python modules:
+
+- PyNaCl==1.4.0
+
+** Imports
+
+#+BEGIN_SRC python
+import nacl.signing
+from pb import crypto_pb2
+#+END_SRC
+
+** Parse keys
+
+#+BEGIN_SRC python
+data_hex = "5d6b9774c1fe2a3ccdf8d84b4dab3ca4327bc462b7845a353b97c8cd8aa2e845f28ec61f09d7c64b74c0a31655dd83b8771f583c5e54a4661bbbbac8fdd554e9"
+data = bytes.fromhex(data_hex)
+#+END_SRC
+
+#+BEGIN_SRC python :results replace code
+privkey = data[:32]
+pubkey = data[32:]
+"\n".join((privkey.hex(), publickey.hex()))
+#+END_SRC
+
+#+RESULTS:
+#+begin_src python
+5d6b9774c1fe2a3ccdf8d84b4dab3ca4327bc462b7845a353b97c8cd8aa2e845
+f28ec61f09d7c64b74c0a31655dd83b8771f583c5e54a4661bbbbac8fdd554e9
+#+end_src
+
+Check it.
+
+#+BEGIN_SRC python :results replace code
+key = nacl.signing.SigningKey(privkey)
+pub = key.verify_key._key.hex()
+pub
+#+END_SRC
+
+#+RESULTS:
+#+begin_src python
+f28ec61f09d7c64b74c0a31655dd83b8771f583c5e54a4661bbbbac8fdd554e9
+#+end_src
+
+** Build keys
+*** Private key
+
+Generate
+
+#+BEGIN_SRC python :results replace code
+privkey = nacl.signing.SigningKey.generate()
+privkey._seed.hex()
+#+END_SRC
+
+#+RESULTS:
+#+begin_src python
+cc92f86b85c1552d9423e4d232ea8bfec041ff639b1ace57f9cd46d3e8def918
+#+end_src
+
+(or) load from hex.
+
+#+BEGIN_SRC python
+hex_key = "5d6b9774c1fe2a3ccdf8d84b4dab3ca4327bc462b7845a353b97c8cd8aa2e845"
+privkey = nacl.signing.SigningKey(hex_key, nacl.encoding.HexEncoder)
+#+END_SRC
+
+*** Public key
+
+Build from private
+
+#+BEGIN_SRC python :results replace code
+pubkey = privkey.verify_key._key
+pubkey.hex()
+#+END_SRC
+
+#+RESULTS:
+#+begin_src python
+f28ec61f09d7c64b74c0a31655dd83b8771f583c5e54a4661bbbbac8fdd554e9
+#+end_src
+
+*** Concatenate results
+
+#+BEGIN_SRC python :results replace code
+data = privkey + pubkey
+data.hex()
+#+END_SRC
+
+#+RESULTS:
+#+begin_src python
+5d6b9774c1fe2a3ccdf8d84b4dab3ca4327bc462b7845a353b97c8cd8aa2e845f28ec61f09d7c64b74c0a31655dd83b8771f583c5e54a4661bbbbac8fdd554e9
+#+end_src
+
+** IPNS name
+
+IPFS uses multihash. No hash function uses for ed25519 keys.
+
+#+BEGIN_SRC python :results replace code
+pb_key = crypto_pb2.PublicKey()
+pb_key.Type = 1
+pb_key.Data = pubkey
+serialized = pb_key.SerializeToString()
+base58.b58encode(bytes([0x00, len(serialized)]) + serialized)
+#+END_SRC
+
+#+RESULTS:
+#+begin_src python
+b'12D3KooWS9D6rAiA2zggVy1kc4m4fh9BnY7uNjKCQKaKoj9V7xP2'
+#+end_src
